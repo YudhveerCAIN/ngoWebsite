@@ -1,5 +1,5 @@
 import ContactInquiry from '../models/ContactInquiry.js';
-import { sendContactConfirmation, sendContactNotification } from '../utils/emailService.js';
+import { sendContactConfirmation, sendContactNotification } from '../utils/resendEmailService.js';
 import { z } from 'zod';
 
 // Validation schema for contact inquiry

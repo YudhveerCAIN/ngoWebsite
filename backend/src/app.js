@@ -51,6 +51,118 @@ app.get("/ping", (req, res) => {
   res.send("pong");
 });
 
+// Email diagnostic endpoint (remove after debugging)
+app.get("/api/debug/email", (req, res) => {
+  const emailConfig = {
+    NODE_ENV: process.env.NODE_ENV,
+    EMAIL_SERVICE: process.env.EMAIL_SERVICE,
+    EMAIL_HOST: process.env.EMAIL_HOST,
+    EMAIL_PORT: process.env.EMAIL_PORT,
+    EMAIL_SECURE: process.env.EMAIL_SECURE,
+    EMAIL_USER: process.env.EMAIL_USER ? "✅ Set" : "❌ Missing",
+    EMAIL_PASS: process.env.EMAIL_PASS ? "✅ Set" : "❌ Missing",
+    EMAIL_FROM: process.env.EMAIL_FROM,
+    ADMIN_EMAIL_NOTIFICATIONS: process.env.ADMIN_EMAIL_NOTIFICATIONS,
+    FEATURE_EMAIL_NOTIFICATIONS: process.env.FEATURE_EMAIL_NOTIFICATIONS,
+  };
+
+  res.json({
+    message: "Email Configuration Debug",
+    config: emailConfig,
+    timestamp: new Date().toISOString(),
+  });
+});
+
+// Test email endpoint (remove after debugging)
+app.post("/api/debug/test-email", async (req, res) => {
+  try {
+    const { sendContactConfirmation } = await import("./utils/emailService.js");
+    
+    const testInquiry = {
+      name: "Test User",
+      email: req.body.email || "test@example.com",
+      subject: "Test Email",
+      message: "This is a test email to verify email functionality.",
+      createdAt: new Date()
+    };
+
+    await sendContactConfirmation(testInquiry);
+    
+    res.json({
+      success: true,
+      message: "Test email sent successfully",
+      sentTo: testInquiry.email,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error("Test email failed:", error);
+    res.status(500).json({
+      success: false,
+      message: "Test email failed",
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// Alternative email test endpoint
+app.post("/api/debug/test-alt-email", async (req, res) => {
+  try {
+    const { testEmailConnection } = await import("./utils/alternativeEmailService.js");
+    
+    const result = await testEmailConnection();
+    
+    res.json({
+      success: result.success,
+      emailService: result.type,
+      testAccount: result.account,
+      error: result.error,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error("Alternative email test failed:", error);
+    res.status(500).json({
+      success: false,
+      message: "Alternative email test failed",
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// Resend email test endpoint
+app.post("/api/debug/test-resend", async (req, res) => {
+  try {
+    const { sendContactConfirmation } = await import("./utils/resendEmailService.js");
+    
+    const testInquiry = {
+      name: "Test User",
+      email: req.body.email || "yudhveerdewal12@gmail.com",
+      subject: "Test Email via Resend",
+      message: "This is a test email to verify Resend email functionality.",
+      createdAt: new Date()
+    };
+
+    const result = await sendContactConfirmation(testInquiry);
+    
+    res.json({
+      success: true,
+      message: "Test email sent via Resend successfully",
+      messageId: result.id,
+      sentTo: testInquiry.email,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error("Resend test email failed:", error);
+    res.status(500).json({
+      success: false,
+      message: "Resend test email failed",
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
 // Routes
 app.use("/api/auth", authRouter);
 app.use("/api/impact", impactRouter);

@@ -1,44 +1,54 @@
-import nodemailer from 'nodemailer';
-import mongoose from 'mongoose';
-import dotenv from 'dotenv';
+import nodemailer from "nodemailer";
+import mongoose from "mongoose";
+import dotenv from "dotenv";
 
 // Ensure environment variables are loaded
 dotenv.config();
 
 // Create transporter based on environment
 const createTransporter = () => {
-  console.log('🔧 Creating email transporter...');
-  console.log('📊 Environment check:', {
+  console.log("🔧 Creating email transporter...");
+  console.log("📊 Environment check:", {
     NODE_ENV: process.env.NODE_ENV,
-    EMAIL_USER: process.env.EMAIL_USER ? '✅ Set' : '❌ Missing',
-    EMAIL_PASS: process.env.EMAIL_PASS ? '✅ Set' : '❌ Missing',
-    EMAIL_FROM: process.env.EMAIL_FROM
+    EMAIL_USER: process.env.EMAIL_USER ? "✅ Set" : "❌ Missing",
+    EMAIL_PASS: process.env.EMAIL_PASS ? "✅ Set" : "❌ Missing",
+    EMAIL_FROM: process.env.EMAIL_FROM,
   });
 
   if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
-    console.log('📧 Creating Gmail SMTP transporter...');
+    console.log("📧 Creating Gmail SMTP transporter...");
     // Production email configuration for Gmail
+    // Try port 465 with SSL first, fallback to 587
+    const useSSL = process.env.EMAIL_USE_SSL !== 'false';
+    const port = useSSL ? 465 : 587;
+    
+    console.log(`🔧 Using SMTP port ${port} (SSL: ${useSSL})`);
+    
     return nodemailer.createTransport({
-      host: 'smtp.gmail.com',
-      port: 587,
-      secure: false, // true for 465, false for other ports
+      host: "smtp.gmail.com",
+      port: port,
+      secure: useSSL, // true for 465, false for 587
       auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS,
       },
       tls: {
-        rejectUnauthorized: false
+        rejectUnauthorized: false,
+        ciphers: 'SSLv3'
       },
-      debug: true, // Enable debug logs
-      logger: true // Enable logger
+      connectionTimeout: 60000, // 60 seconds
+      greetingTimeout: 30000, // 30 seconds
+      socketTimeout: 60000, // 60 seconds
+      debug: true,
+      logger: true
     });
   } else {
-    console.log('⚠️ Email credentials missing - using mock transporter');
+    console.log("⚠️ Email credentials missing - using mock transporter");
     // Development - use a test transporter that doesn't actually send emails
     return nodemailer.createTransport({
       streamTransport: true,
-      newline: 'unix',
-      buffer: true
+      newline: "unix",
+      buffer: true,
     });
   }
 };
@@ -46,26 +56,26 @@ const createTransporter = () => {
 let transporter;
 try {
   transporter = createTransporter();
-  console.log('✅ Email transporter created successfully');
+  console.log("✅ Email transporter created successfully");
 } catch (error) {
-  console.error('❌ Email transporter initialization failed:', error.message);
+  console.error("❌ Email transporter initialization failed:", error.message);
   // Create a mock transporter for development
   transporter = {
     sendMail: async (options) => {
-      console.log('🔄 Mock email sent:', {
+      console.log("🔄 Mock email sent:", {
         to: options.to,
         subject: options.subject,
-        messageId: 'mock-' + Date.now()
+        messageId: "mock-" + Date.now(),
       });
-      return { messageId: 'mock-' + Date.now() };
-    }
+      return { messageId: "mock-" + Date.now() };
+    },
   };
 }
 
 // Email templates
 const emailTemplates = {
   volunteerConfirmation: (volunteer) => ({
-    subject: 'Thank you for volunteering with Urjja Pratishthan Prakashalay!',
+    subject: "Thank you for volunteering with Urjja Pratishthan Prakashalay!",
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <div style="background-color: #3b82f6; color: white; padding: 20px; text-align: center;">
@@ -82,10 +92,20 @@ const emailTemplates = {
             <p><strong>Name:</strong> ${volunteer.fullName}</p>
             <p><strong>Email:</strong> ${volunteer.email}</p>
             <p><strong>Phone:</strong> ${volunteer.phone}</p>
-            <p><strong>Areas of Interest:</strong> ${volunteer.areasOfInterest.join(', ')}</p>
+            <p><strong>Areas of Interest:</strong> ${volunteer.areasOfInterest.join(
+              ", "
+            )}</p>
             <p><strong>Availability:</strong> ${volunteer.availability}</p>
-            ${volunteer.experience ? `<p><strong>Experience:</strong> ${volunteer.experience}</p>` : ''}
-            ${volunteer.message ? `<p><strong>Message:</strong> ${volunteer.message}</p>` : ''}
+            ${
+              volunteer.experience
+                ? `<p><strong>Experience:</strong> ${volunteer.experience}</p>`
+                : ""
+            }
+            ${
+              volunteer.message
+                ? `<p><strong>Message:</strong> ${volunteer.message}</p>`
+                : ""
+            }
           </div>
           
           <h3>What's Next?</h3>
@@ -119,10 +139,10 @@ const emailTemplates = {
       - Name: ${volunteer.fullName}
       - Email: ${volunteer.email}
       - Phone: ${volunteer.phone}
-      - Areas of Interest: ${volunteer.areasOfInterest.join(', ')}
+      - Areas of Interest: ${volunteer.areasOfInterest.join(", ")}
       - Availability: ${volunteer.availability}
-      ${volunteer.experience ? `- Experience: ${volunteer.experience}` : ''}
-      ${volunteer.message ? `- Message: ${volunteer.message}` : ''}
+      ${volunteer.experience ? `- Experience: ${volunteer.experience}` : ""}
+      ${volunteer.message ? `- Message: ${volunteer.message}` : ""}
       
       What's next:
       - Our team will review your application within 2-3 business days
@@ -135,7 +155,7 @@ const emailTemplates = {
       Thank you for your commitment to making a positive impact!
       
       The Urjja Pratishthan Prakashalay Team
-    `
+    `,
   }),
 
   donationReceipt: (donation) => ({
@@ -157,11 +177,23 @@ const emailTemplates = {
             <p><strong>Donor Name:</strong> ${donation.fullName}</p>
             <p><strong>Email:</strong> ${donation.email}</p>
             <p><strong>Amount:</strong> ₹${donation.amountInInr.toLocaleString()}</p>
-            <p><strong>Date:</strong> ${new Date(donation.createdAt).toLocaleDateString()}</p>
-            <p><strong>Transaction ID:</strong> ${donation.transactionId || 'Pending'}</p>
+            <p><strong>Date:</strong> ${new Date(
+              donation.createdAt
+            ).toLocaleDateString()}</p>
+            <p><strong>Transaction ID:</strong> ${
+              donation.transactionId || "Pending"
+            }</p>
             <p><strong>Payment Status:</strong> ${donation.paymentStatus}</p>
-            ${donation.recurring ? `<p><strong>Recurring:</strong> ${donation.frequency}</p>` : ''}
-            ${donation.message ? `<p><strong>Message:</strong> ${donation.message}</p>` : ''}
+            ${
+              donation.recurring
+                ? `<p><strong>Recurring:</strong> ${donation.frequency}</p>`
+                : ""
+            }
+            ${
+              donation.message
+                ? `<p><strong>Message:</strong> ${donation.message}</p>`
+                : ""
+            }
           </div>
           
           <h3>Tax Benefits</h3>
@@ -200,10 +232,10 @@ const emailTemplates = {
       - Email: ${donation.email}
       - Amount: ₹${donation.amountInInr.toLocaleString()}
       - Date: ${new Date(donation.createdAt).toLocaleDateString()}
-      - Transaction ID: ${donation.transactionId || 'Pending'}
+      - Transaction ID: ${donation.transactionId || "Pending"}
       - Payment Status: ${donation.paymentStatus}
-      ${donation.recurring ? `- Recurring: ${donation.frequency}` : ''}
-      ${donation.message ? `- Message: ${donation.message}` : ''}
+      ${donation.recurring ? `- Recurring: ${donation.frequency}` : ""}
+      ${donation.message ? `- Message: ${donation.message}` : ""}
       
       Tax Benefits:
       This donation is eligible for tax deduction under Section 80G of the Income Tax Act.
@@ -213,7 +245,7 @@ const emailTemplates = {
       Thank you for supporting our mission!
       
       The Urjja Pratishthan Prakashalay Team
-    `
+    `,
   }),
 
   donationNotification: (donation) => ({
@@ -231,14 +263,30 @@ const emailTemplates = {
             <h3 style="margin-top: 0;">Donation Details:</h3>
             <p><strong>Donor Name:</strong> ${donation.fullName}</p>
             <p><strong>Email:</strong> ${donation.email}</p>
-            ${donation.phone ? `<p><strong>Phone:</strong> ${donation.phone}</p>` : ''}
+            ${
+              donation.phone
+                ? `<p><strong>Phone:</strong> ${donation.phone}</p>`
+                : ""
+            }
             <p><strong>Amount:</strong> ₹${donation.amountInInr.toLocaleString()}</p>
             <p><strong>Payment Method:</strong> ${donation.paymentProvider}</p>
             <p><strong>Payment Status:</strong> ${donation.paymentStatus}</p>
-            <p><strong>Transaction ID:</strong> ${donation.transactionId || 'Pending'}</p>
-            ${donation.recurring ? `<p><strong>Recurring:</strong> ${donation.frequency}</p>` : ''}
-            ${donation.message ? `<p><strong>Message:</strong> ${donation.message}</p>` : ''}
-            <p><strong>Donation Date:</strong> ${new Date(donation.createdAt).toLocaleString()}</p>
+            <p><strong>Transaction ID:</strong> ${
+              donation.transactionId || "Pending"
+            }</p>
+            ${
+              donation.recurring
+                ? `<p><strong>Recurring:</strong> ${donation.frequency}</p>`
+                : ""
+            }
+            ${
+              donation.message
+                ? `<p><strong>Message:</strong> ${donation.message}</p>`
+                : ""
+            }
+            <p><strong>Donation Date:</strong> ${new Date(
+              donation.createdAt
+            ).toLocaleString()}</p>
           </div>
           
           <p>Please follow up with the donor if needed and update the donation records in the admin panel.</p>
@@ -250,17 +298,17 @@ const emailTemplates = {
       
       Donor: ${donation.fullName}
       Email: ${donation.email}
-      ${donation.phone ? `Phone: ${donation.phone}` : ''}
+      ${donation.phone ? `Phone: ${donation.phone}` : ""}
       Amount: ₹${donation.amountInInr.toLocaleString()}
       Payment Method: ${donation.paymentProvider}
       Payment Status: ${donation.paymentStatus}
-      Transaction ID: ${donation.transactionId || 'Pending'}
-      ${donation.recurring ? `Recurring: ${donation.frequency}` : ''}
-      ${donation.message ? `Message: ${donation.message}` : ''}
+      Transaction ID: ${donation.transactionId || "Pending"}
+      ${donation.recurring ? `Recurring: ${donation.frequency}` : ""}
+      ${donation.message ? `Message: ${donation.message}` : ""}
       Donation Date: ${new Date(donation.createdAt).toLocaleString()}
       
       Please review this donation in the admin panel.
-    `
+    `,
   }),
 
   adminNotification: (volunteer) => ({
@@ -279,11 +327,23 @@ const emailTemplates = {
             <p><strong>Name:</strong> ${volunteer.fullName}</p>
             <p><strong>Email:</strong> ${volunteer.email}</p>
             <p><strong>Phone:</strong> ${volunteer.phone}</p>
-            <p><strong>Areas of Interest:</strong> ${volunteer.areasOfInterest.join(', ')}</p>
+            <p><strong>Areas of Interest:</strong> ${volunteer.areasOfInterest.join(
+              ", "
+            )}</p>
             <p><strong>Availability:</strong> ${volunteer.availability}</p>
-            ${volunteer.experience ? `<p><strong>Experience:</strong> ${volunteer.experience}</p>` : ''}
-            ${volunteer.message ? `<p><strong>Message:</strong> ${volunteer.message}</p>` : ''}
-            <p><strong>Application Date:</strong> ${new Date(volunteer.createdAt).toLocaleString()}</p>
+            ${
+              volunteer.experience
+                ? `<p><strong>Experience:</strong> ${volunteer.experience}</p>`
+                : ""
+            }
+            ${
+              volunteer.message
+                ? `<p><strong>Message:</strong> ${volunteer.message}</p>`
+                : ""
+            }
+            <p><strong>Application Date:</strong> ${new Date(
+              volunteer.createdAt
+            ).toLocaleString()}</p>
           </div>
           
           <p>Please review this application in the admin panel and follow up with the applicant.</p>
@@ -296,18 +356,18 @@ const emailTemplates = {
       Applicant: ${volunteer.fullName}
       Email: ${volunteer.email}
       Phone: ${volunteer.phone}
-      Areas of Interest: ${volunteer.areasOfInterest.join(', ')}
+      Areas of Interest: ${volunteer.areasOfInterest.join(", ")}
       Availability: ${volunteer.availability}
-      ${volunteer.experience ? `Experience: ${volunteer.experience}` : ''}
-      ${volunteer.message ? `Message: ${volunteer.message}` : ''}
+      ${volunteer.experience ? `Experience: ${volunteer.experience}` : ""}
+      ${volunteer.message ? `Message: ${volunteer.message}` : ""}
       Application Date: ${new Date(volunteer.createdAt).toLocaleString()}
       
       Please review this application in the admin panel.
-    `
+    `,
   }),
 
   contactConfirmation: (inquiry) => ({
-    subject: 'Thank you for contacting Urjja Pratishthan Prakashalay!',
+    subject: "Thank you for contacting Urjja Pratishthan Prakashalay!",
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <div style="background-color: #3b82f6; color: white; padding: 20px; text-align: center;">
@@ -323,10 +383,16 @@ const emailTemplates = {
             <h3 style="margin-top: 0;">Your Message Details:</h3>
             <p><strong>Name:</strong> ${inquiry.name}</p>
             <p><strong>Email:</strong> ${inquiry.email}</p>
-            ${inquiry.phone ? `<p><strong>Phone:</strong> ${inquiry.phone}</p>` : ''}
+            ${
+              inquiry.phone
+                ? `<p><strong>Phone:</strong> ${inquiry.phone}</p>`
+                : ""
+            }
             <p><strong>Subject:</strong> ${inquiry.subject}</p>
             <p><strong>Message:</strong> ${inquiry.message}</p>
-            <p><strong>Submitted:</strong> ${new Date(inquiry.createdAt).toLocaleString()}</p>
+            <p><strong>Submitted:</strong> ${new Date(
+              inquiry.createdAt
+            ).toLocaleString()}</p>
           </div>
           
           <h3>What Happens Next?</h3>
@@ -369,7 +435,7 @@ const emailTemplates = {
       Your message details:
       - Name: ${inquiry.name}
       - Email: ${inquiry.email}
-      ${inquiry.phone ? `- Phone: ${inquiry.phone}` : ''}
+      ${inquiry.phone ? `- Phone: ${inquiry.phone}` : ""}
       - Subject: ${inquiry.subject}
       - Message: ${inquiry.message}
       - Submitted: ${new Date(inquiry.createdAt).toLocaleString()}
@@ -387,7 +453,7 @@ const emailTemplates = {
       Thank you for your interest in our work!
       
       The Urjja Pratishthan Prakashalay Team
-    `
+    `,
   }),
 
   contactNotification: (inquiry) => ({
@@ -405,13 +471,19 @@ const emailTemplates = {
             <h3 style="margin-top: 0;">Inquiry Details:</h3>
             <p><strong>Name:</strong> ${inquiry.name}</p>
             <p><strong>Email:</strong> ${inquiry.email}</p>
-            ${inquiry.phone ? `<p><strong>Phone:</strong> ${inquiry.phone}</p>` : ''}
+            ${
+              inquiry.phone
+                ? `<p><strong>Phone:</strong> ${inquiry.phone}</p>`
+                : ""
+            }
             <p><strong>Subject:</strong> ${inquiry.subject}</p>
             <p><strong>Message:</strong></p>
             <div style="background-color: white; padding: 10px; border-left: 4px solid #3b82f6; margin: 10px 0;">
               ${inquiry.message}
             </div>
-            <p><strong>Submitted:</strong> ${new Date(inquiry.createdAt).toLocaleString()}</p>
+            <p><strong>Submitted:</strong> ${new Date(
+              inquiry.createdAt
+            ).toLocaleString()}</p>
             <p><strong>Status:</strong> ${inquiry.status}</p>
           </div>
           
@@ -423,8 +495,10 @@ const emailTemplates = {
           <p style="margin-top: 20px;">
             <strong>Quick Actions:</strong><br>
             • Review in admin panel<br>
-            • Respond via email: <a href="mailto:${inquiry.email}">${inquiry.email}</a><br>
-            ${inquiry.phone ? `• Call: ${inquiry.phone}<br>` : ''}
+            • Respond via email: <a href="mailto:${inquiry.email}">${
+      inquiry.email
+    }</a><br>
+            ${inquiry.phone ? `• Call: ${inquiry.phone}<br>` : ""}
             • Update inquiry status after response
           </p>
         </div>
@@ -436,7 +510,7 @@ const emailTemplates = {
       Contact Details:
       - Name: ${inquiry.name}
       - Email: ${inquiry.email}
-      ${inquiry.phone ? `- Phone: ${inquiry.phone}` : ''}
+      ${inquiry.phone ? `- Phone: ${inquiry.phone}` : ""}
       - Subject: ${inquiry.subject}
       - Message: ${inquiry.message}
       - Submitted: ${new Date(inquiry.createdAt).toLocaleString()}
@@ -448,72 +522,87 @@ const emailTemplates = {
       Quick Actions:
       • Review in admin panel
       • Respond via email: ${inquiry.email}
-      ${inquiry.phone ? `• Call: ${inquiry.phone}` : ''}
+      ${inquiry.phone ? `• Call: ${inquiry.phone}` : ""}
       • Update inquiry status after response
-    `
-  })
+    `,
+  }),
 };
 
 // Email sending functions
 export const sendVolunteerConfirmation = async (volunteer) => {
   try {
-    console.log('📧 Preparing volunteer confirmation email for:', volunteer.email);
+    console.log(
+      "📧 Preparing volunteer confirmation email for:",
+      volunteer.email
+    );
     const template = emailTemplates.volunteerConfirmation(volunteer);
-    
+
     const mailOptions = {
-      from: process.env.EMAIL_FROM || 'noreply@urjjapratishthan.org',
+      from: process.env.EMAIL_FROM || "noreply@urjjapratishthan.org",
       to: volunteer.email,
       subject: template.subject,
       html: template.html,
       text: template.text,
     };
 
-    console.log('📤 Sending volunteer confirmation email...');
-    console.log('📋 Mail options:', {
+    console.log("📤 Sending volunteer confirmation email...");
+    console.log("📋 Mail options:", {
       from: mailOptions.from,
       to: mailOptions.to,
-      subject: mailOptions.subject
+      subject: mailOptions.subject,
     });
 
     const result = await transporter.sendMail(mailOptions);
-    console.log('✅ Volunteer confirmation email sent successfully:', result.messageId);
+    console.log(
+      "✅ Volunteer confirmation email sent successfully:",
+      result.messageId
+    );
     return result;
   } catch (error) {
-    console.error('❌ Error sending volunteer confirmation email:', error);
-    console.error('📝 Error details:', error.message);
-    console.error('🔍 Full error:', error);
+    console.error("❌ Error sending volunteer confirmation email:", error);
+    console.error("📝 Error details:", error.message);
+    console.error("🔍 Full error:", error);
     throw error;
   }
 };
 
 export const sendAdminNotification = async (volunteer) => {
   try {
-    console.log('📧 Preparing admin notification email for volunteer:', volunteer.fullName);
+    console.log(
+      "📧 Preparing admin notification email for volunteer:",
+      volunteer.fullName
+    );
     const template = emailTemplates.adminNotification(volunteer);
-    
-    const adminEmail = process.env.ADMIN_EMAIL_NOTIFICATIONS || process.env.ADMIN_EMAIL || 'admin@urjjapratishthan.org';
+
+    const adminEmail =
+      process.env.ADMIN_EMAIL_NOTIFICATIONS ||
+      process.env.ADMIN_EMAIL ||
+      "admin@urjjapratishthan.org";
     const mailOptions = {
-      from: process.env.EMAIL_FROM || 'noreply@urjjapratishthan.org',
+      from: process.env.EMAIL_FROM || "noreply@urjjapratishthan.org",
       to: adminEmail,
       subject: template.subject,
       html: template.html,
       text: template.text,
     };
 
-    console.log('📤 Sending admin notification email...');
-    console.log('📋 Mail options:', {
+    console.log("📤 Sending admin notification email...");
+    console.log("📋 Mail options:", {
       from: mailOptions.from,
       to: mailOptions.to,
-      subject: mailOptions.subject
+      subject: mailOptions.subject,
     });
 
     const result = await transporter.sendMail(mailOptions);
-    console.log('✅ Admin notification email sent successfully:', result.messageId);
+    console.log(
+      "✅ Admin notification email sent successfully:",
+      result.messageId
+    );
     return result;
   } catch (error) {
-    console.error('❌ Error sending admin notification email:', error);
-    console.error('📝 Error details:', error.message);
-    console.error('🔍 Full error:', error);
+    console.error("❌ Error sending admin notification email:", error);
+    console.error("📝 Error details:", error.message);
+    console.error("🔍 Full error:", error);
     throw error;
   }
 };
@@ -521,9 +610,9 @@ export const sendAdminNotification = async (volunteer) => {
 export const sendDonationReceipt = async (donation) => {
   try {
     const template = emailTemplates.donationReceipt(donation);
-    
+
     const mailOptions = {
-      from: process.env.EMAIL_FROM || 'noreply@urjjapratishthan.org',
+      from: process.env.EMAIL_FROM || "noreply@urjjapratishthan.org",
       to: donation.email,
       subject: template.subject,
       html: template.html,
@@ -531,16 +620,16 @@ export const sendDonationReceipt = async (donation) => {
     };
 
     const result = await transporter.sendMail(mailOptions);
-    console.log('Donation receipt email sent:', result.messageId);
-    
+    console.log("Donation receipt email sent:", result.messageId);
+
     // Mark receipt as sent
-    await mongoose.model('Donation').findByIdAndUpdate(donation._id, {
-      receiptSent: true
+    await mongoose.model("Donation").findByIdAndUpdate(donation._id, {
+      receiptSent: true,
     });
-    
+
     return result;
   } catch (error) {
-    console.error('Error sending donation receipt email:', error);
+    console.error("Error sending donation receipt email:", error);
     throw error;
   }
 };
@@ -548,83 +637,100 @@ export const sendDonationReceipt = async (donation) => {
 export const sendDonationNotification = async (donation) => {
   try {
     const template = emailTemplates.donationNotification(donation);
-    
+
     const mailOptions = {
-      from: process.env.EMAIL_FROM || 'noreply@urjjapratishthan.org',
-      to: process.env.ADMIN_EMAIL_NOTIFICATIONS || process.env.ADMIN_EMAIL || 'admin@urjjapratishthan.org',
+      from: process.env.EMAIL_FROM || "noreply@urjjapratishthan.org",
+      to:
+        process.env.ADMIN_EMAIL_NOTIFICATIONS ||
+        process.env.ADMIN_EMAIL ||
+        "admin@urjjapratishthan.org",
       subject: template.subject,
       html: template.html,
       text: template.text,
     };
 
     const result = await transporter.sendMail(mailOptions);
-    console.log('Donation notification email sent:', result.messageId);
+    console.log("Donation notification email sent:", result.messageId);
     return result;
   } catch (error) {
-    console.error('Error sending donation notification email:', error);
+    console.error("Error sending donation notification email:", error);
     throw error;
   }
 };
 
 export const sendContactConfirmation = async (inquiry) => {
   try {
-    console.log('📧 Preparing contact confirmation email for:', inquiry.email);
+    console.log("📧 Preparing contact confirmation email for:", inquiry.email);
     const template = emailTemplates.contactConfirmation(inquiry);
-    
+
     const mailOptions = {
-      from: process.env.EMAIL_FROM || 'noreply@urjjapratishthan.org',
+      from: process.env.EMAIL_FROM || "noreply@urjjapratishthan.org",
       to: inquiry.email,
       subject: template.subject,
       html: template.html,
       text: template.text,
     };
 
-    console.log('📤 Sending contact confirmation email...');
-    console.log('📋 Mail options:', {
+    console.log("📤 Sending contact confirmation email...");
+    console.log("📋 Mail options:", {
       from: mailOptions.from,
       to: mailOptions.to,
-      subject: mailOptions.subject
+      subject: mailOptions.subject,
     });
 
     const result = await transporter.sendMail(mailOptions);
-    console.log('✅ Contact confirmation email sent:', result.messageId);
+    console.log("✅ Contact confirmation email sent successfully!");
+    console.log("📧 Message ID:", result.messageId);
+    console.log("📨 Response:", result.response);
+    console.log("📬 Accepted:", result.accepted);
+    console.log("🚫 Rejected:", result.rejected);
     return result;
   } catch (error) {
-    console.error('❌ Error sending contact confirmation email:', error);
-    console.error('📝 Error details:', error.message);
-    console.error('🔍 Full error:', error);
+    console.error("❌ Error sending contact confirmation email:", error);
+    console.error("📝 Error details:", error.message);
+    console.error("🔍 Full error:", error);
     throw error;
   }
 };
 
 export const sendContactNotification = async (inquiry) => {
   try {
-    console.log('📧 Preparing contact notification email for inquiry:', inquiry.subject);
+    console.log(
+      "📧 Preparing contact notification email for inquiry:",
+      inquiry.subject
+    );
     const template = emailTemplates.contactNotification(inquiry);
-    
-    const adminEmail = process.env.ADMIN_EMAIL_NOTIFICATIONS || process.env.ADMIN_EMAIL || 'admin@urjjapratishthan.org';
+
+    const adminEmail =
+      process.env.ADMIN_EMAIL_NOTIFICATIONS ||
+      process.env.ADMIN_EMAIL ||
+      "admin@urjjapratishthan.org";
     const mailOptions = {
-      from: process.env.EMAIL_FROM || 'noreply@urjjapratishthan.org',
+      from: process.env.EMAIL_FROM || "noreply@urjjapratishthan.org",
       to: adminEmail,
       subject: template.subject,
       html: template.html,
       text: template.text,
     };
 
-    console.log('📤 Sending contact notification email...');
-    console.log('📋 Mail options:', {
+    console.log("📤 Sending contact notification email...");
+    console.log("📋 Mail options:", {
       from: mailOptions.from,
       to: mailOptions.to,
-      subject: mailOptions.subject
+      subject: mailOptions.subject,
     });
 
     const result = await transporter.sendMail(mailOptions);
-    console.log('✅ Contact notification email sent:', result.messageId);
+    console.log("✅ Contact notification email sent successfully!");
+    console.log("📧 Message ID:", result.messageId);
+    console.log("📨 Response:", result.response);
+    console.log("📬 Accepted:", result.accepted);
+    console.log("🚫 Rejected:", result.rejected);
     return result;
   } catch (error) {
-    console.error('❌ Error sending contact notification email:', error);
-    console.error('📝 Error details:', error.message);
-    console.error('🔍 Full error:', error);
+    console.error("❌ Error sending contact notification email:", error);
+    console.error("📝 Error details:", error.message);
+    console.error("🔍 Full error:", error);
     throw error;
   }
 };

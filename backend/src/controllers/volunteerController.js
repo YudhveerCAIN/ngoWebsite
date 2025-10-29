@@ -1,5 +1,5 @@
 import Volunteer from '../models/Volunteer.js';
-import { sendVolunteerConfirmation, sendAdminNotification } from '../utils/emailService.js';
+import { sendVolunteerConfirmation, sendAdminNotification } from '../utils/resendEmailService.js';
 import { z } from 'zod';
 
 // Validation schema for volunteer registration

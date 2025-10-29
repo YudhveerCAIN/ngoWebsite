@@ -7,16 +7,23 @@ dotenv.config();
 // Initialize Resend
 let resend;
 try {
+  console.log("🔧 Initializing Resend email service...");
+  console.log("📊 Environment check:", {
+    NODE_ENV: process.env.NODE_ENV,
+    RESEND_API_KEY: process.env.RESEND_API_KEY ? "✅ Set" : "❌ Missing",
+    EMAIL_FROM: process.env.EMAIL_FROM
+  });
+
   if (process.env.RESEND_API_KEY) {
     resend = new Resend(process.env.RESEND_API_KEY);
-    console.log("✅ Resend email service initialized");
+    console.log("✅ Resend email service initialized successfully");
   } else {
-    console.log("⚠️ RESEND_API_KEY not found, using mock service");
-    resend = null;
+    console.error("❌ RESEND_API_KEY not found in environment variables");
+    throw new Error("RESEND_API_KEY is required but not found");
   }
 } catch (error) {
   console.error("❌ Failed to initialize Resend:", error.message);
-  resend = null;
+  throw error; // Don't fall back to mock, throw error instead
 }
 
 // Email templates (same as before but optimized for Resend)
@@ -286,19 +293,7 @@ const emailTemplates = {
   },
 };
 
-// Mock email service for when Resend is not available
-const mockEmailService = {
-  sendEmail: async (options) => {
-    console.log("📧 Mock email would be sent:");
-    console.log("  From:", options.from);
-    console.log("  To:", options.to);
-    console.log("  Subject:", options.subject);
-    return {
-      id: "mock-" + Date.now(),
-      success: true,
-    };
-  },
-};
+// Resend email service - no mock fallback
 
 // Email sending functions using Resend
 export const sendVolunteerConfirmation = async (volunteer) => {
@@ -310,12 +305,7 @@ export const sendVolunteerConfirmation = async (volunteer) => {
     const template = emailTemplates.volunteerConfirmation(volunteer);
 
     if (!resend) {
-      console.log("⚠️ Resend not available, using mock service");
-      return await mockEmailService.sendEmail({
-        from: process.env.EMAIL_FROM || "noreply@urjjapratishthan.org",
-        to: volunteer.email,
-        subject: template.subject,
-      });
+      throw new Error("Resend email service is not initialized");
     }
 
     console.log("📤 Sending volunteer confirmation email via Resend...");
@@ -345,12 +335,7 @@ export const sendContactConfirmation = async (inquiry) => {
     const template = emailTemplates.contactConfirmation(inquiry);
 
     if (!resend) {
-      console.log("⚠️ Resend not available, using mock service");
-      return await mockEmailService.sendEmail({
-        from: process.env.EMAIL_FROM || "noreply@urjjapratishthan.org",
-        to: inquiry.email,
-        subject: template.subject,
-      });
+      throw new Error("Resend email service is not initialized");
     }
 
     console.log("📤 Sending contact confirmation email via Resend...");
@@ -365,7 +350,8 @@ export const sendContactConfirmation = async (inquiry) => {
     });
 
     console.log("✅ Contact confirmation email sent successfully!");
-    console.log("📧 Message ID:", result.id);
+    console.log("📧 Message ID:", result.data?.id || result.id);
+    console.log("📨 Full response:", result);
     return result;
   } catch (error) {
     console.error("❌ Error sending contact confirmation email:", error);
@@ -386,12 +372,7 @@ export const sendAdminNotification = async (data, type = "volunteer") => {
       "admin@urjjapratishthan.org";
 
     if (!resend) {
-      console.log("⚠️ Resend not available, using mock service");
-      return await mockEmailService.sendEmail({
-        from: process.env.EMAIL_FROM || "noreply@urjjapratishthan.org",
-        to: adminEmail,
-        subject: template.subject,
-      });
+      throw new Error("Resend email service is not initialized");
     }
 
     console.log("📤 Sending admin notification email via Resend...");

@@ -25,7 +25,7 @@ const createTransporter = () => {
     console.log(`🔧 Using SMTP port ${port} (SSL: ${useSSL})`);
     
     return nodemailer.createTransport({
-      host: "smtp.gmail.com",
+      host: "smtp-relay.brevo.com",
       port: port,
       secure: useSSL, // true for 465, false for 587
       auth: {

@@ -104,7 +104,7 @@ export function AuthProvider({ children }) {
           const parsedUser = JSON.parse(user)
           
           // Validate token with server
-          const response = await fetch('/api/auth/validate-token', {
+          const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/validate-token`, {
             method: 'POST',
             headers: {
               'Authorization': `Bearer ${token}`,
@@ -179,7 +179,7 @@ export function AuthProvider({ children }) {
     try {
       // Call logout endpoint
       if (state.token) {
-        await fetch('/api/auth/logout', {
+        await fetch(`${import.meta.env.VITE_API_URL}/auth/logout`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${state.token}`,
@@ -204,7 +204,7 @@ export function AuthProvider({ children }) {
         throw new Error('No token to refresh')
       }
       
-      const response = await fetch('/api/auth/refresh-token', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/refresh-token`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${state.token}`,

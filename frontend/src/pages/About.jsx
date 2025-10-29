@@ -23,8 +23,8 @@ export default function About() {
 			setError('')
 
 			const [storyResponse, visionMissionResponse] = await Promise.all([
-				fetch('/api/about/story'),
-				fetch('/api/about/vision-mission')
+				fetch(`${import.meta.env.VITE_API_URL}/about/story`),
+				fetch(`${import.meta.env.VITE_API_URL}/about/vision-mission`)
 			])
 
 			if (storyResponse.ok && visionMissionResponse.ok) {

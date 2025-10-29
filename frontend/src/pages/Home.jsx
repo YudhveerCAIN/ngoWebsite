@@ -52,7 +52,7 @@ export default function Home() {
 		let isMounted = true
 		async function fetchImpact() {
 			try {
-				const res = await fetch('/api/impact')
+				const res = await fetch(`${import.meta.env.VITE_API_URL}/impact`)
 				if (!res.ok) throw new Error('Failed to load impact')
 				const data = await res.json()
 				if (isMounted) setImpact(data)

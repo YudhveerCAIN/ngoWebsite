@@ -1,5 +1,4 @@
 import express from "express";
-import cors from "cors";
 import morgan from "morgan";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler.js";
 import { applySecurity } from "./middleware/security.js";

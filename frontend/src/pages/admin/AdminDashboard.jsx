@@ -29,10 +29,10 @@ const AdminDashboard = () => {
         volunteerResponse,
         donationResponse
       ] = await Promise.allSettled([
-        fetch('/api/impact'),
-        apiRequest('/api/contact/stats'),
-        fetch('/api/volunteers?limit=1'),
-        fetch('/api/donations?limit=1')
+        fetch(`${import.meta.env.VITE_API_URL}/impact`),
+        apiRequest('/contact/stats'),
+        fetch(`${import.meta.env.VITE_API_URL}/volunteers?limit=1`),
+        fetch(`${import.meta.env.VITE_API_URL}/donations?limit=1`)
       ])
       
       const dashboardStats = {

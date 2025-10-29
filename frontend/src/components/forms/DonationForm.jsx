@@ -29,7 +29,7 @@ const DonationForm = ({ onSuccess }) => {
     
     try {
       // First, create the donation record
-      const donationResponse = await fetch('/api/donations', {
+      const donationResponse = await fetch(`${import.meta.env.VITE_API_URL}/donations`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -66,7 +66,7 @@ const DonationForm = ({ onSuccess }) => {
   const initiateRazorpayPayment = async (donation) => {
     try {
       // Create Razorpay order
-      const orderResponse = await fetch('/api/donations/payment', {
+      const orderResponse = await fetch(`${import.meta.env.VITE_API_URL}/donations/payment`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -94,7 +94,7 @@ const DonationForm = ({ onSuccess }) => {
         handler: async function (response) {
           // Payment successful
           try {
-            const verifyResponse = await fetch('/api/donations/verify', {
+            const verifyResponse = await fetch(`${import.meta.env.VITE_API_URL}/donations/verify`, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',

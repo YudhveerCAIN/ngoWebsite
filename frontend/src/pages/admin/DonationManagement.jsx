@@ -56,7 +56,7 @@ const DonationManagement = () => {
 
   const fetchDonationStats = async () => {
     try {
-      const response = await apiRequest('/api/donations/stats')
+      const response = await apiRequest('/donations/stats')
       if (response.ok) {
         const data = await response.json()
         setStats(data)

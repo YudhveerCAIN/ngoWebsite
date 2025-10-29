@@ -20,6 +20,7 @@
     "prestart:production": "npm run validate-env"
   },
   "dependencies": {
+    "axios": "^1.13.1",
     "bcrypt": "^6.0.0",
     "compression": "^1.8.1",
     "cors": "^2.8.5",

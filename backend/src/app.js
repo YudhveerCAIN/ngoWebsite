@@ -51,6 +51,36 @@ app.get("/ping", (req, res) => {
   res.send("pong");
 });
 
+// Test Brevo email endpoint (remove after testing)
+app.post("/api/test-brevo", async (req, res) => {
+  try {
+    const { sendMail } = await import("./utils/brevoEmailService.js");
+    
+    const testEmail = req.body.email || "yudhveerdewal12@gmail.com";
+    const result = await sendMail(
+      testEmail,
+      "Test Email from Urjja Pratishthan",
+      "<p>This is a test email to verify Brevo integration is working!</p><p>If you receive this, the email service is working correctly.</p>"
+    );
+    
+    res.json({
+      success: true,
+      message: "Test email sent via Brevo successfully",
+      result: result,
+      sentTo: testEmail,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error("Brevo test email failed:", error);
+    res.status(500).json({
+      success: false,
+      message: "Brevo test email failed",
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
 
 
 // Routes

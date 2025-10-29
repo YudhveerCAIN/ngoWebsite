@@ -1,0 +1,64 @@
+services:
+  - type: web
+    name: urjja-pratishthan-backend
+    env: node
+    plan: free
+    buildCommand: cd backend && npm install
+    startCommand: cd backend && npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: APP_NAME
+        value: "Urjja Pratishthan Prakashalay"
+      - key: MONGODB_URI
+        sync: false  # Set this in Render dashboard
+      - key: JWT_SECRET
+        sync: false  # Set this in Render dashboard
+      - key: JWT_EXPIRES_IN
+        value: 8h
+      - key: EMAIL_SERVICE
+        value: gmail
+      - key: EMAIL_HOST
+        value: smtp.gmail.com
+      - key: EMAIL_PORT
+        value: 587
+      - key: EMAIL_SECURE
+        value: false
+      - key: EMAIL_USER
+        sync: false  # Set this in Render dashboard
+      - key: EMAIL_PASS
+        sync: false  # Set this in Render dashboard
+      - key: EMAIL_FROM
+        value: "Urjja Pratishthan Prakashalay <urjjapratishthan@gmail.com>"
+      - key: ADMIN_EMAIL_NOTIFICATIONS
+        value: urjjapratishthan@gmail.com
+      - key: RAZORPAY_KEY_ID
+        sync: false  # Set this in Render dashboard
+      - key: RAZORPAY_KEY_SECRET
+        sync: false  # Set this in Render dashboard
+      - key: CURRENCY
+        value: INR
+      - key: MIN_DONATION_AMOUNT
+        value: 100
+      - key: FRONTEND_URL
+        value: https://urjjapratishthan.vercel.app
+      - key: ALLOWED_ORIGINS
+        value: https://urjjapratishthan.vercel.app
+      - key: FEATURE_VOLUNTEER_REGISTRATION
+        value: true
+      - key: FEATURE_DONATION_PROCESSING
+        value: true
+      - key: FEATURE_CONTACT_FORM
+        value: true
+      - key: FEATURE_ADMIN_PANEL
+        value: true
+      - key: FEATURE_EMAIL_NOTIFICATIONS
+        value: true
+      - key: ENABLE_CORS
+        value: true
+      - key: ENABLE_MORGAN_LOGGING
+        value: false
+      - key: ENABLE_SEED_DATA
+        value: false
